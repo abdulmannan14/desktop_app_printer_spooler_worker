@@ -8,7 +8,7 @@ DEFAULT_CONFIG = {
     "printer_name": "",
     "master_folder_path": "",
     "printer_hot_folder_path": "",
-    "allowed_file_extensions": "pdf,txt",
+    "allowed_file_extensions": "pdf,png,jpg,webp",
     "spooler_job_threshold": 1,
     "polling_interval": 10,
     "minimum_file_age": 30,

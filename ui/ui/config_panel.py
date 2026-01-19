@@ -1,13 +1,10 @@
-# Configuration Panel UI (stub)
-
 from PySide6.QtWidgets import (
-    QWidget, QFormLayout, QLineEdit, QPushButton, QHBoxLayout, QVBoxLayout, QLabel, QFileDialog, QMessageBox, QSpinBox
+    QWidget, QFormLayout, QLineEdit, QPushButton, QHBoxLayout, QVBoxLayout, QLabel, QFileDialog, QMessageBox, QSpinBox, QStyle, QInputDialog
 )
 from PySide6.QtCore import Qt
 import os
 import re
 import sys
-import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import config_utils
 
@@ -23,8 +20,21 @@ class ConfigPanel(QWidget):
 
         # Fields
         self.printer_name = QLineEdit()
+        self.printer_select_btn = QPushButton()
+        self.printer_select_btn.setIcon(self.style().standardIcon(QStyle.SP_ComputerIcon))
+        self.printer_select_btn.setToolTip("Select Printer")
+        self.printer_select_btn.setFixedWidth(32)
         self.master_folder_path = QLineEdit()
+        self.master_folder_btn = QPushButton()
+        self.master_folder_btn.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
+        self.master_folder_btn.setToolTip("Select Master Folder")
+        self.master_folder_btn.setFixedWidth(32)
+
         self.printer_hot_folder_path = QLineEdit()
+        self.printer_hot_folder_btn = QPushButton()
+        self.printer_hot_folder_btn.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
+        self.printer_hot_folder_btn.setToolTip("Select Printer Hot Folder")
+        self.printer_hot_folder_btn.setFixedWidth(32)
         self.allowed_file_extensions = QLineEdit()
         self.spooler_job_threshold = QSpinBox()
         self.spooler_job_threshold.setMinimum(1)
@@ -36,16 +46,33 @@ class ConfigPanel(QWidget):
         self.minimum_file_age.setMinimum(0)
         self.minimum_file_age.setMaximum(86400)
         self.log_file_path = QLineEdit()
+        self.log_file_btn = QPushButton()
+        self.log_file_btn.setIcon(self.style().standardIcon(QStyle.SP_FileIcon))
+        self.log_file_btn.setToolTip("Select Log File")
+        self.log_file_btn.setFixedWidth(32)
 
         # Add fields to form
-        form.addRow("Printer Name / ID:", self.printer_name)
-        form.addRow("Master Folder Path:", self.master_folder_path)
-        form.addRow("Printer Hot Folder Path:", self.printer_hot_folder_path)
+        printer_layout = QHBoxLayout()
+        printer_layout.addWidget(self.printer_name)
+        printer_layout.addWidget(self.printer_select_btn)
+        form.addRow("Printer Name / ID:", printer_layout)
+        master_folder_layout = QHBoxLayout()
+        master_folder_layout.addWidget(self.master_folder_path)
+        master_folder_layout.addWidget(self.master_folder_btn)
+        form.addRow("Master Folder Path:", master_folder_layout)
+
+        hot_folder_layout = QHBoxLayout()
+        hot_folder_layout.addWidget(self.printer_hot_folder_path)
+        hot_folder_layout.addWidget(self.printer_hot_folder_btn)
+        form.addRow("Printer Hot Folder Path:", hot_folder_layout)
         form.addRow("Allowed File Extensions:", self.allowed_file_extensions)
         form.addRow("Spooler Job Threshold:", self.spooler_job_threshold)
         form.addRow("Polling Interval (seconds):", self.polling_interval)
         form.addRow("Minimum File Age (seconds):", self.minimum_file_age)
-        form.addRow("Log File Path:", self.log_file_path)
+        log_file_layout = QHBoxLayout()
+        log_file_layout.addWidget(self.log_file_path)
+        log_file_layout.addWidget(self.log_file_btn)
+        form.addRow("Log File Path:", log_file_layout)
 
         layout.addLayout(form)
 
@@ -68,6 +95,30 @@ class ConfigPanel(QWidget):
         self.save_btn.clicked.connect(self.save_config)
         self.reload_btn.clicked.connect(self.load_config)
         self.test_btn.clicked.connect(self.test_paths)
+        self.master_folder_btn.clicked.connect(self._select_master_folder)
+        self.printer_hot_folder_btn.clicked.connect(self._select_hot_folder)
+        self.log_file_btn.clicked.connect(self._select_log_file)
+        self.printer_select_btn.clicked.connect(self._select_printer)
+
+    def _select_printer(self):
+        # For Phase 1: simple input dialog (cross-platform)
+        name, ok = QInputDialog.getText(self, "Select Printer", "Enter printer name or ID:", text=self.printer_name.text())
+        if ok and name:
+            self.printer_name.setText(name)
+    def _select_master_folder(self):
+        folder = QFileDialog.getExistingDirectory(self, "Select Master Folder", "")
+        if folder:
+            self.master_folder_path.setText(folder)
+
+    def _select_hot_folder(self):
+        folder = QFileDialog.getExistingDirectory(self, "Select Printer Hot Folder", "")
+        if folder:
+            self.printer_hot_folder_path.setText(folder)
+
+    def _select_log_file(self):
+        file, _ = QFileDialog.getSaveFileName(self, "Select Log File", "", "Log Files (*.log);;All Files (*)")
+        if file:
+            self.log_file_path.setText(file)
 
         layout.addStretch()
 

@@ -1,2 +1,3 @@
 # requirements.txt for Phase 1 UI
 PySide6>=6.5
+pywin32
