@@ -37,6 +37,25 @@ class StatusPanel(QWidget):
         self.refresh_btn.clicked.connect(self.refresh_status)
         layout.addWidget(self.refresh_btn)
 
+        # Stop dispatcher button
+        self.stop_dispatcher_btn = QPushButton("Stop Dispatcher")
+        self.stop_dispatcher_btn.clicked.connect(self.stop_dispatcher)
+        layout.addWidget(self.stop_dispatcher_btn)
+    def stop_dispatcher(self):
+        import psutil
+        killed = False
+        for p in psutil.process_iter(['pid', 'name', 'cmdline']):
+            try:
+                if 'dispatcher.py' in ' '.join(p.info['cmdline']):
+                    p.terminate()
+                    killed = True
+            except Exception:
+                continue
+        if killed:
+            self.service_status.setText("Stopped (by user)")
+        else:
+            self.service_status.setText("Dispatcher not running")
+
     def refresh_status(self):
         import os
         import sys
