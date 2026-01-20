@@ -101,8 +101,19 @@ class ConfigPanel(QWidget):
         self.printer_select_btn.clicked.connect(self._select_printer)
 
     def _select_printer(self):
-        # For Phase 1: simple input dialog (cross-platform)
-        name, ok = QInputDialog.getText(self, "Select Printer", "Enter printer name or ID:", text=self.printer_name.text())
+        # Get available printers using Windows PowerShell
+        import subprocess
+        try:
+            result = subprocess.run([
+                "powershell", "-Command", "Get-Printer | Select-Object -ExpandProperty Name"
+            ], capture_output=True, text=True, timeout=5)
+            printers = [p.strip() for p in result.stdout.splitlines() if p.strip()]
+        except Exception as e:
+            printers = []
+        if not printers:
+            printers = [self.printer_name.text() or "No printers found"]
+        from PySide6.QtWidgets import QInputDialog
+        name, ok = QInputDialog.getItem(self, "Select Printer", "Available printers:", printers, editable=False)
         if ok and name:
             self.printer_name.setText(name)
     def _select_master_folder(self):
@@ -139,7 +150,31 @@ class ConfigPanel(QWidget):
         if not self._validate_config(config):
             return
         config_utils.save_config(config)
-        self.status_label.setText("Config saved.")
+        self.status_label.setText("Config saved. Restarting dispatcher...")
+        # Restart dispatcher.py process (script mode)
+        try:
+            import psutil
+            import subprocess
+            import time
+            # Find and terminate all dispatcher.py processes
+            killed = False
+            for p in psutil.process_iter(['pid', 'name', 'cmdline']):
+                try:
+                    if 'dispatcher.py' in ' '.join(p.info['cmdline']):
+                        p.terminate()
+                        killed = True
+                except Exception:
+                    continue
+            if killed:
+                time.sleep(1)  # Give time to terminate
+            # Start dispatcher.py again
+            project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+            dispatcher_path = os.path.join(project_root, 'service', 'dispatcher.py')
+            python_exe = sys.executable
+            subprocess.Popen([python_exe, dispatcher_path], cwd=project_root)
+            self.status_label.setText("Config saved and dispatcher restarted.")
+        except Exception as e:
+            self.status_label.setText(f"Config saved, but failed to restart dispatcher: {e}")
 
     def test_paths(self):
         # Mock test: just check if paths are non-empty and look like paths

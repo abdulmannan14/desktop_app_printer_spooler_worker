@@ -7,7 +7,11 @@ class StatusPanel(QWidget):
     def __init__(self):
         super().__init__()
         self._init_ui()
-        self._mock_status()
+        self.refresh_status()
+        # Auto-refresh every 3 seconds
+        self._timer = QTimer(self)
+        self._timer.timeout.connect(self.refresh_status)
+        self._timer.start(3000)
 
     def _init_ui(self):
         layout = QVBoxLayout(self)
@@ -28,16 +32,58 @@ class StatusPanel(QWidget):
         layout.addLayout(form)
         layout.addStretch()
 
-        # Refresh button for mock
-        self.refresh_btn = QPushButton("Refresh (Mock)")
-        self.refresh_btn.clicked.connect(self._mock_status)
+        # Refresh button for real status
+        self.refresh_btn = QPushButton("Refresh Status")
+        self.refresh_btn.clicked.connect(self.refresh_status)
         layout.addWidget(self.refresh_btn)
 
-    def _mock_status(self):
-        # Simulate status values
-        import random, datetime
-        self.service_status.setText(random.choice(["Running (Mock)", "Stopped (Mock)"]))
-        self.printer_status.setText(random.choice(["Idle (Mock)", "Busy (Mock)", "Unknown (Mock)"]))
-        self.job_count.setText(str(random.randint(0, 5)))
-        self.last_dispatched.setText(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-        self.last_error.setText(random.choice(["", "No paper (Mock)", "Connection lost (Mock)"]))
+    def refresh_status(self):
+        import os
+        import sys
+        import datetime
+        sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+        import config_utils
+        import service.printer_probe as printer_probe
+
+        config = config_utils.load_config()
+        printer_name = config.get("printer_name", "")
+        log_path = config.get("log_file_path", "printer_service.log")
+
+        # Service status: check if dispatcher is running (simple check)
+        import psutil
+        service_running = False
+        for p in psutil.process_iter(['name', 'cmdline']):
+            try:
+                if 'dispatcher.py' in ' '.join(p.info['cmdline']):
+                    service_running = True
+                    break
+            except Exception:
+                continue
+        self.service_status.setText("Running" if service_running else "Stopped")
+
+        # Printer status and job count
+        try:
+            job_count = printer_probe.get_printer_job_count(printer_name)
+            self.job_count.setText(str(job_count) if job_count >= 0 else "Unknown")
+            if job_count == 0:
+                self.printer_status.setText("Idle")
+            elif job_count > 0:
+                self.printer_status.setText("Busy")
+            else:
+                self.printer_status.setText("Unknown")
+        except Exception as e:
+            self.printer_status.setText(f"Error: {e}")
+            self.job_count.setText("Unknown")
+
+        # Last dispatched job and last error from log file
+        last_dispatched = ""
+        last_error = ""
+        if os.path.exists(log_path):
+            with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
+                for line in f:
+                    if "Job dispatched:" in line:
+                        last_dispatched = line.strip()
+                    if "ERROR" in line:
+                        last_error = line.strip()
+        self.last_dispatched.setText(last_dispatched)
+        self.last_error.setText(last_error)

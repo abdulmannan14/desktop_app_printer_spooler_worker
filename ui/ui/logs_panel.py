@@ -37,14 +37,15 @@ class LogsPanel(QWidget):
     def load_logs(self, level=None):
         config = config_utils.load_config()
         log_path = config.get("log_file_path", "printer_service.log")
-        # For Phase 1, mock log content
-        logs = [
-            "2026-01-18 10:00:00 [INFO] Service started",
-            "2026-01-18 10:01:00 [INFO] Job claimed: file1.pdf",
-            "2026-01-18 10:02:00 [WARNING] Printer slow response",
-            "2026-01-18 10:03:00 [ERROR] Failed to move file2.pdf",
-            "2026-01-18 10:04:00 [INFO] Job dispatched: file1.pdf",
-        ]
-        if level:
-            logs = [l for l in logs if f"[{level}]" in l]
+        logs = []
+        if os.path.exists(log_path):
+            with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
+                for line in f:
+                    if level:
+                        if f"[{level}]" in line:
+                            logs.append(line.rstrip())
+                    else:
+                        logs.append(line.rstrip())
+        else:
+            logs = ["Log file not found: " + log_path]
         self.log_view.setPlainText("\n".join(logs))

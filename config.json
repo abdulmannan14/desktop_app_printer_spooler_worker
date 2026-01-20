@@ -1,0 +1,10 @@
+{
+    "printer_name": "Microsoft Print to PDF",
+    "master_folder_path": "C:/Users/DELL/Desktop/desktop_app_printer_spooler_worker/test_master",
+    "printer_hot_folder_path": "C:/Users/DELL/Desktop/desktop_app_printer_spooler_worker/test_hot",
+    "allowed_file_extensions": "pdf,txt,jpg,png,webp",
+    "spooler_job_threshold": 4,
+    "polling_interval": 10,
+    "minimum_file_age": 30,
+    "log_file_path": "printer_service.log"
+}
